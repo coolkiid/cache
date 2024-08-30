@@ -4,7 +4,7 @@
 import * as core from '@actions/core'
 import * as path from 'path'
 import * as utils from './internal/cacheUtils'
-import * as cacheHttpClient from './internal/cacheHttpClient'
+import * as cacheHttpClient from './internal/objectstorageClient'
 import {createTar, extractTar, listTar} from './internal/tar'
 import {DownloadOptions, UploadOptions} from './options'
 
@@ -98,7 +98,7 @@ export async function restoreCache(
       compressionMethod,
       enableCrossOsArchive
     })
-    if (!cacheEntry?.archiveLocation) {
+    if (!cacheEntry?.objectKey) {
       // Cache not found
       return undefined
     }
@@ -116,7 +116,7 @@ export async function restoreCache(
 
     // Download the cache from the cache entry
     await cacheHttpClient.downloadCache(
-      cacheEntry.archiveLocation,
+      cacheEntry.objectKey,
       archivePath,
       options
     )
@@ -170,12 +170,12 @@ export async function saveCache(
   key: string,
   options?: UploadOptions,
   enableCrossOsArchive = false
-): Promise<number> {
+): Promise<string> {
   checkPaths(paths)
   checkKey(key)
 
   const compressionMethod = await utils.getCompressionMethod()
-  let cacheId = -1
+  let cacheId = key
 
   const cachePaths = await utils.resolvePaths(paths)
   core.debug('Cache Paths:')
@@ -210,32 +210,6 @@ export async function saveCache(
         `Cache size of ~${Math.round(
           archiveFileSize / (1024 * 1024)
         )} MB (${archiveFileSize} B) is over the 10GB limit, not saving cache.`
-      )
-    }
-
-    core.debug('Reserving Cache')
-    const reserveCacheResponse = await cacheHttpClient.reserveCache(
-      key,
-      paths,
-      {
-        compressionMethod,
-        enableCrossOsArchive,
-        cacheSize: archiveFileSize
-      }
-    )
-
-    if (reserveCacheResponse?.result?.cacheId) {
-      cacheId = reserveCacheResponse?.result?.cacheId
-    } else if (reserveCacheResponse?.statusCode === 400) {
-      throw new Error(
-        reserveCacheResponse?.error?.message ??
-          `Cache size of ~${Math.round(
-            archiveFileSize / (1024 * 1024)
-          )} MB (${archiveFileSize} B) is over the data cap limit, not saving cache.`
-      )
-    } else {
-      throw new ReserveCacheError(
-        `Unable to reserve cache with key ${key}, another job may be creating this cache. More details: ${reserveCacheResponse?.error?.message}`
       )
     }
 
