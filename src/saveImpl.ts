@@ -16,8 +16,8 @@ process.on("uncaughtException", e => utils.logWarning(e.message));
 
 export async function saveImpl(
     stateProvider: IStateProvider
-): Promise<number | void> {
-    let cacheId = -1;
+): Promise<string | void> {
+    let cacheId: string | void = undefined;
     try {
         if (!utils.isCacheFeatureAvailable()) {
             return;
@@ -69,7 +69,7 @@ export async function saveImpl(
             enableCrossOsArchive
         );
 
-        if (cacheId != -1) {
+        if (cacheId != undefined) {
             core.info(`Cache saved with key: ${primaryKey}`);
         }
     } catch (error: unknown) {
@@ -83,7 +83,7 @@ export async function saveOnlyRun(
 ): Promise<void> {
     try {
         const cacheId = await saveImpl(new NullStateProvider());
-        if (cacheId === -1) {
+        if (cacheId === undefined) {
             core.warning(`Cache save failed.`);
         }
     } catch (err) {
