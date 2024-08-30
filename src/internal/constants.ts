@@ -1,3 +1,6 @@
+// https://github.com/actions/toolkit/blob/main/packages/cache/src/cache.ts
+// 6c4e082c181a51609197e536ef5255a0c9baeef7
+
 export enum CacheFilename {
   Gzip = 'cache.tgz',
   Zstd = 'cache.tzst'
