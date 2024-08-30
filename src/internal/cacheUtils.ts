@@ -90,7 +90,7 @@ async function getVersion(
         stderr: (data: Buffer): string => (versionOutput += data.toString())
       }
     })
-  } catch (err) {
+  } catch (err: any) {
     core.debug(err.message)
   }
 
