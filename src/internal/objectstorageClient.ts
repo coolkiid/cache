@@ -12,8 +12,8 @@ import * as crypto from 'crypto'
 import * as fs from 'fs'
 import {URL} from 'url'
 
-import * as utils from '../internal/cacheUtils'
-import {CompressionMethod} from '../internal/constants'
+import * as utils from './cacheUtils'
+import {CompressionMethod} from './constants'
 import {
   ArtifactCacheEntry,
   InternalCacheOptions,
@@ -22,12 +22,12 @@ import {
   ReserveCacheResponse,
   ITypedResponseWithError,
   ArtifactCacheList
-} from '../internal/contracts'
+} from './contracts'
 import {
   downloadCacheHttpClient,
   downloadCacheHttpClientConcurrent,
   downloadCacheStorageSDK
-} from '../internal/downloadUtils'
+} from './downloadUtils'
 import {
   DownloadOptions,
   UploadOptions,
@@ -38,7 +38,7 @@ import {
   isSuccessStatusCode,
   retryHttpClientResponse,
   retryTypedResponse
-} from '../internal/requestUtils'
+} from './requestUtils'
 
 const versionSalt = '1.0'
 
@@ -277,7 +277,7 @@ async function uploadChunk(
   }
 }
 
-async function uploadFile(
+async function uploadFile1(
   httpClient: HttpClient,
   cacheId: number,
   archivePath: string,
@@ -339,6 +339,40 @@ async function uploadFile(
   return
 }
 
+function handleError(error) {
+  if (error instanceof TosClientError) {
+    console.log('Client Err Msg:', error.message);
+    console.log('Client Err Stack:', error.stack);
+  } else if (error instanceof TosServerError) {
+    console.log('Request ID:', error.requestId);
+    console.log('Response Status Code:', error.statusCode);
+    console.log('Response Header:', error.headers);
+    console.log('Response Err Code:', error.code);
+    console.log('Response Err Msg:', error.message);
+  } else {
+    console.log('unexpected exception, message: ', error);
+  }
+}
+
+async function uploadFile(
+  client: TosClient, 
+  cacheId: number, 
+  archivePath: string,
+  options?: UploadOptions
+): Promise<void> {
+  try {
+    const objectName = `caches/${cacheId.toString()}`;
+    // 上传对象
+    await client.putObject({
+      bucket: bucketName,
+      key: objectName,
+      body: fs.readFileSync(archivePath),
+    });
+  } catch (error) {
+    handleError(error);
+  }
+}
+
 async function commitCache(
   httpClient: HttpClient,
   cacheId: number,
@@ -353,6 +387,10 @@ async function commitCache(
   )
 }
 
+import { TosClient, TosClientError, TosServerError } from '@volcengine/tos-sdk'
+
+const bucketName = process.env['TOS_BUCKET_NAME'] // test-cache-action
+
 export async function saveCache(
   cacheId: number,
   archivePath: string,
@@ -360,8 +398,15 @@ export async function saveCache(
 ): Promise<void> {
   const httpClient = createHttpClient()
 
+  // setup volc object storage client.
+  const client = new TosClient({
+    accessKeyId: process.env['ACCESS_KEY'],
+    accessKeySecret: process.env['SECRET_KEY'],
+    region: 'cn-shanghai'
+  })
+
   core.debug('Upload cache')
-  await uploadFile(httpClient, cacheId, archivePath, options)
+  await uploadFile(client, cacheId, archivePath, options)
 
   // Commit Cache
   core.debug('Commiting cache')
