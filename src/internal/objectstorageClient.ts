@@ -389,7 +389,7 @@ async function commitCache(
 
 import { TosClient, TosClientError, TosServerError } from '@volcengine/tos-sdk'
 
-const bucketName = process.env['TOS_BUCKET_NAME'] // test-cache-action
+const bucketName = process.env['BUCKET_NAME'] // test-cache-action
 
 export async function saveCache(
   cacheId: number,
@@ -400,8 +400,8 @@ export async function saveCache(
 
   // setup volc object storage client.
   const client = new TosClient({
-    accessKeyId: process.env['ACCESS_KEY'],
-    accessKeySecret: process.env['SECRET_KEY'],
+    accessKeyId: process.env['ACCESS_KEY'] as string,
+    accessKeySecret: process.env['SECRET_KEY'] as string,
     region: 'cn-shanghai'
   })
 
