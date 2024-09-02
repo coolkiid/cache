@@ -361,7 +361,7 @@ async function uploadFile(
   options?: UploadOptions
 ): Promise<void> {
   try {
-    const objectName = `caches/${cacheId.toString()}`;
+    const objectName = `caches/${repo}/${ref}/${workflow}/${cacheId.toString()}`;
     // 上传对象
     await client.putObjectFromFile({
       bucket: bucketName,
@@ -390,6 +390,9 @@ async function commitCache(
 import { TosClient, TosClientError, TosServerError } from '@volcengine/tos-sdk'
 
 const bucketName = process.env['BUCKET_NAME'] // test-cache-action
+const repo = process.env['GITHUB_REPOSITORY']
+const workflow = process.env['GITHUB_WORKFLOW']
+const ref = process.env['GITHUB_REF']
 
 export async function saveCache(
   cacheId: number,
@@ -415,12 +418,12 @@ export async function saveCache(
     `Cache Size: ~${Math.round(cacheSize / (1024 * 1024))} MB (${cacheSize} B)`
   )
 
-  const commitCacheResponse = await commitCache(httpClient, cacheId, cacheSize)
-  if (!isSuccessStatusCode(commitCacheResponse.statusCode)) {
-    throw new Error(
-      `Cache service responded with ${commitCacheResponse.statusCode} during commit cache.`
-    )
-  }
+  // const commitCacheResponse = await commitCache(httpClient, cacheId, cacheSize)
+  // if (!isSuccessStatusCode(commitCacheResponse.statusCode)) {
+  //   throw new Error(
+  //     `Cache service responded with ${commitCacheResponse.statusCode} during commit cache.`
+  //   )
+  // }
 
   core.info('Cache saved successfully')
 }
