@@ -363,10 +363,10 @@ async function uploadFile(
   try {
     const objectName = `caches/${cacheId.toString()}`;
     // 上传对象
-    await client.putObject({
+    await client.putObjectFromFile({
       bucket: bucketName,
       key: objectName,
-      body: fs.readFileSync(archivePath),
+      filePath: archivePath
     });
   } catch (error) {
     handleError(error);
