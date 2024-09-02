@@ -4,7 +4,7 @@
 import * as core from '@actions/core'
 import * as path from 'path'
 import * as utils from './internal/cacheUtils'
-import * as cacheHttpClient from './internal/cacheHttpClient'
+import * as cacheHttpClient from './internal/objectstorageClient'
 import {createTar, extractTar, listTar} from './internal/tar'
 import {DownloadOptions, UploadOptions} from './options'
 
