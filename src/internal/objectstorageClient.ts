@@ -108,43 +108,83 @@ export async function getCacheEntry(
   paths: string[],
   options?: InternalCacheOptions
 ): Promise<ArtifactCacheEntry | null> {
-  const httpClient = createHttpClient()
+  const client = new TosClient({
+    accessKeyId: process.env['ACCESS_KEY'] as string,
+    accessKeySecret: process.env['TOS_SECRET_KEY'] as string,
+    region: process.env['REGION'] as string
+  })
   const version = getCacheVersion(
     paths,
     options?.compressionMethod,
     options?.enableCrossOsArchive
   )
-  const resource = `cache?keys=${encodeURIComponent(
-    keys.join(',')
-  )}&version=${version}`
 
-  const response = await retryTypedResponse('getCacheEntry', async () =>
-    httpClient.getJson<ArtifactCacheEntry>(getCacheApiUrl(resource))
-  )
-  // Cache not found
-  if (response.statusCode === 204) {
-    // List cache for primary key only if cache miss occurs
-    if (core.isDebug()) {
-      await printCachesListForDiagnostics(keys[0], httpClient, version)
+  for (const key of keys) {
+    try {
+      await client.headObject({
+        bucket: bucketName,
+        key: key
+      })
+      const entry: ArtifactCacheEntry = {
+        cacheVersion: version, 
+        objectKey: key,
+      }
+      return entry
+    } catch (error) {
+      if (error instanceof TosServerError && error.statusCode === 404) {
+        console.log(`The object ${key} doesn't exist.`)
+      }
     }
-    return null
   }
-  if (!isSuccessStatusCode(response.statusCode)) {
-    throw new Error(`Cache service responded with ${response.statusCode}`)
+  const entry: ArtifactCacheEntry = {
+    cacheVersion: version
   }
-
-  const cacheResult = response.result
-  const cacheDownloadUrl = cacheResult?.archiveLocation
-  if (!cacheDownloadUrl) {
-    // Cache achiveLocation not found. This should never happen, and hence bail out.
-    throw new Error('Cache not found.')
-  }
-  core.setSecret(cacheDownloadUrl)
-  core.debug(`Cache Result:`)
-  core.debug(JSON.stringify(cacheResult))
-
-  return cacheResult
+  console.warn(`unmatched keys ${keys}`)
+  return entry
 }
+
+// export async function getCacheEntry(
+//   keys: string[],
+//   paths: string[],
+//   options?: InternalCacheOptions
+// ): Promise<ArtifactCacheEntry | null> {
+//   const httpClient = createHttpClient()
+//   const version = getCacheVersion(
+//     paths,
+//     options?.compressionMethod,
+//     options?.enableCrossOsArchive
+//   )
+//   const resource = `cache?keys=${encodeURIComponent(
+//     keys.join(',')
+//   )}&version=${version}`
+
+//   const response = await retryTypedResponse('getCacheEntry', async () =>
+//     httpClient.getJson<ArtifactCacheEntry>(getCacheApiUrl(resource))
+//   )
+//   // Cache not found
+//   if (response.statusCode === 204) {
+//     // List cache for primary key only if cache miss occurs
+//     if (core.isDebug()) {
+//       await printCachesListForDiagnostics(keys[0], httpClient, version)
+//     }
+//     return null
+//   }
+//   if (!isSuccessStatusCode(response.statusCode)) {
+//     throw new Error(`Cache service responded with ${response.statusCode}`)
+//   }
+
+//   const cacheResult = response.result
+//   const cacheDownloadUrl = cacheResult?.archiveLocation
+//   if (!cacheDownloadUrl) {
+//     // Cache achiveLocation not found. This should never happen, and hence bail out.
+//     throw new Error('Cache not found.')
+//   }
+//   core.setSecret(cacheDownloadUrl)
+//   core.debug(`Cache Result:`)
+//   core.debug(JSON.stringify(cacheResult))
+
+//   return cacheResult
+// }
 
 async function printCachesListForDiagnostics(
   key: string,
@@ -172,35 +212,46 @@ async function printCachesListForDiagnostics(
 }
 
 export async function downloadCache(
-  archiveLocation: string,
+  objectKey: string,
   archivePath: string,
   options?: DownloadOptions
 ): Promise<void> {
-  const archiveUrl = new URL(archiveLocation)
-  const downloadOptions = getDownloadOptions(options)
+  const client = new TosClient({
+    accessKeyId: process.env['ACCESS_KEY'] as string,
+    accessKeySecret: process.env['TOS_SECRET_KEY'] as string,
+    region: process.env['REGION'] as string
+  })
+  await client.getObjectToFile({
+    bucket: bucketName,
+    key: objectKey,
+    filePath: archivePath
+  })
 
-  if (archiveUrl.hostname.endsWith('.blob.core.windows.net')) {
-    if (downloadOptions.useAzureSdk) {
-      // Use Azure storage SDK to download caches hosted on Azure to improve speed and reliability.
-      await downloadCacheStorageSDK(
-        archiveLocation,
-        archivePath,
-        downloadOptions
-      )
-    } else if (downloadOptions.concurrentBlobDownloads) {
-      // Use concurrent implementation with HttpClient to work around blob SDK issue
-      await downloadCacheHttpClientConcurrent(
-        archiveLocation,
-        archivePath,
-        downloadOptions
-      )
-    } else {
-      // Otherwise, download using the Actions http-client.
-      await downloadCacheHttpClient(archiveLocation, archivePath)
-    }
-  } else {
-    await downloadCacheHttpClient(archiveLocation, archivePath)
-  }
+  // const archiveUrl = new URL(objectKey)
+  // const downloadOptions = getDownloadOptions(options)
+
+  // if (archiveUrl.hostname.endsWith('.blob.core.windows.net')) {
+  //   if (downloadOptions.useAzureSdk) {
+  //     // Use Azure storage SDK to download caches hosted on Azure to improve speed and reliability.
+  //     await downloadCacheStorageSDK(
+  //       objectKey,
+  //       archivePath,
+  //       downloadOptions
+  //     )
+  //   } else if (downloadOptions.concurrentBlobDownloads) {
+  //     // Use concurrent implementation with HttpClient to work around blob SDK issue
+  //     await downloadCacheHttpClientConcurrent(
+  //       objectKey,
+  //       archivePath,
+  //       downloadOptions
+  //     )
+  //   } else {
+  //     // Otherwise, download using the Actions http-client.
+  //     await downloadCacheHttpClient(objectKey, archivePath)
+  //   }
+  // } else {
+  //   await downloadCacheHttpClient(objectKey, archivePath)
+  // }
 }
 
 // Reserve Cache
@@ -228,6 +279,14 @@ export async function reserveCache(
     )
   )
   return response
+}
+
+export async function reserveCacheVolc(
+  key: string,
+  paths: string[],
+  options?: InternalCacheOptions
+): Promise<void> {
+
 }
 
 function getContentRange(start: number, end: number): string {
@@ -361,7 +420,7 @@ async function uploadFile(
   options?: UploadOptions
 ): Promise<void> {
   try {
-    const objectName = `caches/${repo}/${ref}/${workflow}/${cacheId.toString()}`;
+    const objectName = `caches/${repo}/${ref}/${workflowHash}/${cacheId.toString()}`;
     // 上传对象
     await client.putObjectFromFile({
       bucket: bucketName,
@@ -391,7 +450,7 @@ import { TosClient, TosClientError, TosServerError } from '@volcengine/tos-sdk'
 
 const bucketName = process.env['BUCKET_NAME'] // test-cache-action
 const repo = process.env['GITHUB_REPOSITORY']
-const workflow = process.env['GITHUB_WORKFLOW']
+const workflowHash = process.env['GITHUB_WORKFLOW_SHA']
 const ref = process.env['GITHUB_REF']
 
 export async function saveCache(
@@ -399,13 +458,11 @@ export async function saveCache(
   archivePath: string,
   options?: UploadOptions
 ): Promise<void> {
-  const httpClient = createHttpClient()
-
   // setup volc object storage client.
   const client = new TosClient({
     accessKeyId: process.env['ACCESS_KEY'] as string,
     accessKeySecret: process.env['SECRET_KEY'] as string,
-    region: 'cn-shanghai'
+    region: process.env['REGION'] as string
   })
 
   core.debug('Upload cache')

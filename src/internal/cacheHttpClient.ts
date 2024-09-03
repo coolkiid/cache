@@ -134,7 +134,7 @@ export async function getCacheEntry(
   }
 
   const cacheResult = response.result
-  const cacheDownloadUrl = cacheResult?.archiveLocation
+  const cacheDownloadUrl = cacheResult?.objectKey
   if (!cacheDownloadUrl) {
     // Cache achiveLocation not found. This should never happen, and hence bail out.
     throw new Error('Cache not found.')

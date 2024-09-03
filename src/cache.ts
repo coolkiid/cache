@@ -98,7 +98,7 @@ export async function restoreCache(
       compressionMethod,
       enableCrossOsArchive
     })
-    if (!cacheEntry?.archiveLocation) {
+    if (!cacheEntry?.objectKey) {
       // Cache not found
       return undefined
     }
@@ -116,7 +116,7 @@ export async function restoreCache(
 
     // Download the cache from the cache entry
     await cacheHttpClient.downloadCache(
-      cacheEntry.archiveLocation,
+      cacheEntry.objectKey,
       archivePath,
       options
     )
