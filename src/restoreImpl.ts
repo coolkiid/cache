@@ -42,6 +42,8 @@ export async function restoreImpl(
         const failOnCacheMiss = utils.getInputAsBool(Inputs.FailOnCacheMiss);
         const lookupOnly = utils.getInputAsBool(Inputs.LookupOnly);
 
+        console.warn(`> cachePaths: ${cachePaths}, primaryKey: ${primaryKey}, restoreKey: ${restoreKeys}`)
+
         const cacheKey = await cache.restoreCache(
             cachePaths,
             primaryKey,
@@ -49,6 +51,8 @@ export async function restoreImpl(
             { lookupOnly: lookupOnly },
             enableCrossOsArchive
         );
+
+        console.warn(`> cacheKey: ${cacheKey}`)
 
         if (!cacheKey) {
             core.setOutput(Outputs.CacheHit, false.toString());

@@ -120,19 +120,22 @@ export async function getCacheEntry(
   )
 
   for (const key of keys) {
+    const objectKey = `caches/${repo}/${ref}/${workflowHash}/${key}`
     try {
+      console.warn(`>> objectKey: ${objectKey}`)
       await client.headObject({
         bucket: bucketName,
-        key: key
+        key: objectKey
       })
       const entry: ArtifactCacheEntry = {
+        cacheKey: key,
         cacheVersion: version, 
-        objectKey: key,
+        objectKey: objectKey,
       }
       return entry
     } catch (error) {
       if (error instanceof TosServerError && error.statusCode === 404) {
-        console.log(`The object ${key} doesn't exist.`)
+        console.warn(`The object ${objectKey} doesn't exist.`)
       }
     }
   }

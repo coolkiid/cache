@@ -52422,20 +52422,23 @@ function getCacheEntry(keys, paths, options) {
         });
         const version = getCacheVersion(paths, options === null || options === void 0 ? void 0 : options.compressionMethod, options === null || options === void 0 ? void 0 : options.enableCrossOsArchive);
         for (const key of keys) {
+            const objectKey = `caches/${repo}/${ref}/${workflowHash}/${key}`;
             try {
+                console.warn(`>> objectKey: ${objectKey}`);
                 yield client.headObject({
                     bucket: bucketName,
-                    key: key
+                    key: objectKey
                 });
                 const entry = {
+                    cacheKey: key,
                     cacheVersion: version,
-                    objectKey: key,
+                    objectKey: objectKey,
                 };
                 return entry;
             }
             catch (error) {
                 if (error instanceof tos_sdk_1.TosServerError && error.statusCode === 404) {
-                    console.log(`The object ${key} doesn't exist.`);
+                    console.warn(`The object ${objectKey} doesn't exist.`);
                 }
             }
         }
@@ -53218,7 +53221,9 @@ function restoreImpl(stateProvider, earlyExit) {
             const enableCrossOsArchive = utils.getInputAsBool(constants_1.Inputs.EnableCrossOsArchive);
             const failOnCacheMiss = utils.getInputAsBool(constants_1.Inputs.FailOnCacheMiss);
             const lookupOnly = utils.getInputAsBool(constants_1.Inputs.LookupOnly);
+            console.warn(`> cachePaths: ${cachePaths}, primaryKey: ${primaryKey}, restoreKey: ${restoreKeys}`);
             const cacheKey = yield cache.restoreCache(cachePaths, primaryKey, restoreKeys, { lookupOnly: lookupOnly }, enableCrossOsArchive);
+            console.warn(`> cacheKey: ${cacheKey}`);
             if (!cacheKey) {
                 core.setOutput(constants_1.Outputs.CacheHit, false.toString());
                 if (failOnCacheMiss) {
