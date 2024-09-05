@@ -110,7 +110,7 @@ export async function getCacheEntry(
 ): Promise<ArtifactCacheEntry | null> {
   const client = new TosClient({
     accessKeyId: process.env['ACCESS_KEY'] as string,
-    accessKeySecret: process.env['TOS_SECRET_KEY'] as string,
+    accessKeySecret: process.env['SECRET_KEY'] as string,
     region: process.env['REGION'] as string
   })
   const version = getCacheVersion(
@@ -218,7 +218,7 @@ export async function downloadCache(
 ): Promise<void> {
   const client = new TosClient({
     accessKeyId: process.env['ACCESS_KEY'] as string,
-    accessKeySecret: process.env['TOS_SECRET_KEY'] as string,
+    accessKeySecret: process.env['SECRET_KEY'] as string,
     region: process.env['REGION'] as string
   })
   await client.getObjectToFile({
@@ -287,7 +287,7 @@ export async function reserveCacheVolc(
 ): Promise<ReserveCacheResponse> {
   const client = new TosClient({
     accessKeyId: process.env['ACCESS_KEY'] as string,
-    accessKeySecret: process.env['TOS_SECRET_KEY'] as string,
+    accessKeySecret: process.env['SECRET_KEY'] as string,
     region: process.env['REGION'] as string
   })
   const version = getCacheVersion(
