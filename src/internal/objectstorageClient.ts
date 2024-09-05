@@ -254,7 +254,6 @@ export async function downloadCache(
   // }
 }
 
-// Reserve Cache
 export async function reserveCache(
   key: string,
   paths: string[],
@@ -285,8 +284,22 @@ export async function reserveCacheVolc(
   key: string,
   paths: string[],
   options?: InternalCacheOptions
-): Promise<void> {
-
+): Promise<ReserveCacheResponse> {
+  const client = new TosClient({
+    accessKeyId: process.env['ACCESS_KEY'] as string,
+    accessKeySecret: process.env['TOS_SECRET_KEY'] as string,
+    region: process.env['REGION'] as string
+  })
+  const version = getCacheVersion(
+    paths,
+    options?.compressionMethod,
+    options?.enableCrossOsArchive
+  )
+  const cacheId = 1
+  const response: ReserveCacheResponse = {
+    cacheId: cacheId
+  }
+  return response
 }
 
 function getContentRange(start: number, end: number): string {
@@ -336,67 +349,67 @@ async function uploadChunk(
   }
 }
 
-async function uploadFile1(
-  httpClient: HttpClient,
-  cacheId: number,
-  archivePath: string,
-  options?: UploadOptions
-): Promise<void> {
-  // Upload Chunks
-  const fileSize = utils.getArchiveFileSizeInBytes(archivePath)
-  const resourceUrl = getCacheApiUrl(`caches/${cacheId.toString()}`)
-  const fd = fs.openSync(archivePath, 'r')
-  const uploadOptions = getUploadOptions(options)
+// async function uploadFile(
+//   httpClient: HttpClient,
+//   cacheId: number,
+//   archivePath: string,
+//   options?: UploadOptions
+// ): Promise<void> {
+//   // Upload Chunks
+//   const fileSize = utils.getArchiveFileSizeInBytes(archivePath)
+//   const resourceUrl = getCacheApiUrl(`caches/${cacheId.toString()}`)
+//   const fd = fs.openSync(archivePath, 'r')
+//   const uploadOptions = getUploadOptions(options)
 
-  const concurrency = utils.assertDefined(
-    'uploadConcurrency',
-    uploadOptions.uploadConcurrency
-  )
-  const maxChunkSize = utils.assertDefined(
-    'uploadChunkSize',
-    uploadOptions.uploadChunkSize
-  )
+//   const concurrency = utils.assertDefined(
+//     'uploadConcurrency',
+//     uploadOptions.uploadConcurrency
+//   )
+//   const maxChunkSize = utils.assertDefined(
+//     'uploadChunkSize',
+//     uploadOptions.uploadChunkSize
+//   )
 
-  const parallelUploads = [...new Array(concurrency).keys()]
-  core.debug('Awaiting all uploads')
-  let offset = 0
+//   const parallelUploads = [...new Array(concurrency).keys()]
+//   core.debug('Awaiting all uploads')
+//   let offset = 0
 
-  try {
-    await Promise.all(
-      parallelUploads.map(async () => {
-        while (offset < fileSize) {
-          const chunkSize = Math.min(fileSize - offset, maxChunkSize)
-          const start = offset
-          const end = offset + chunkSize - 1
-          offset += maxChunkSize
+//   try {
+//     await Promise.all(
+//       parallelUploads.map(async () => {
+//         while (offset < fileSize) {
+//           const chunkSize = Math.min(fileSize - offset, maxChunkSize)
+//           const start = offset
+//           const end = offset + chunkSize - 1
+//           offset += maxChunkSize
 
-          await uploadChunk(
-            httpClient,
-            resourceUrl,
-            () =>
-              fs
-                .createReadStream(archivePath, {
-                  fd,
-                  start,
-                  end,
-                  autoClose: false
-                })
-                .on('error', error => {
-                  throw new Error(
-                    `Cache upload failed because file read failed with ${error.message}`
-                  )
-                }),
-            start,
-            end
-          )
-        }
-      })
-    )
-  } finally {
-    fs.closeSync(fd)
-  }
-  return
-}
+//           await uploadChunk(
+//             httpClient,
+//             resourceUrl,
+//             () =>
+//               fs
+//                 .createReadStream(archivePath, {
+//                   fd,
+//                   start,
+//                   end,
+//                   autoClose: false
+//                 })
+//                 .on('error', error => {
+//                   throw new Error(
+//                     `Cache upload failed because file read failed with ${error.message}`
+//                   )
+//                 }),
+//             start,
+//             end
+//           )
+//         }
+//       })
+//     )
+//   } finally {
+//     fs.closeSync(fd)
+//   }
+//   return
+// }
 
 function handleError(error) {
   if (error instanceof TosClientError) {
@@ -415,12 +428,12 @@ function handleError(error) {
 
 async function uploadFile(
   client: TosClient, 
-  cacheId: number, 
+  cacheId: string, 
   archivePath: string,
   options?: UploadOptions
 ): Promise<void> {
   try {
-    const objectName = `caches/${repo}/${ref}/${workflowHash}/${cacheId.toString()}`;
+    const objectName = `caches/${repo}/${ref}/${workflowHash}/${cacheId}`;
     // 上传对象
     await client.putObjectFromFile({
       bucket: bucketName,
@@ -454,7 +467,7 @@ const workflowHash = process.env['GITHUB_WORKFLOW_SHA']
 const ref = process.env['GITHUB_REF']
 
 export async function saveCache(
-  cacheId: number,
+  cacheId: string,
   archivePath: string,
   options?: UploadOptions
 ): Promise<void> {
