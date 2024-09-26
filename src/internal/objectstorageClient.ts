@@ -18,10 +18,16 @@ const workflowHash = process.env["GITHUB_WORKFLOW_SHA"];
 const ref = process.env["GITHUB_REF"];
 
 function createObjectStorageClient(): TosClient {
+    const endpoint = process.env["ENDPOINT"];
+    const opts = endpoint
+        ? { endpoint: endpoint, secure: false }
+        : { secure: true };
+
     return new TosClient({
         accessKeyId: process.env["ACCESS_KEY"] as string,
         accessKeySecret: process.env["SECRET_KEY"] as string,
-        region: process.env["REGION"] as string
+        region: process.env["REGION"] as string,
+        ...opts
     });
 }
 
