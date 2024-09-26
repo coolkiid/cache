@@ -21,7 +21,9 @@ function createObjectStorageClient(): TosClient {
     return new TosClient({
         accessKeyId: process.env["ACCESS_KEY"] as string,
         accessKeySecret: process.env["SECRET_KEY"] as string,
-        region: process.env["REGION"] as string
+        region: process.env["REGION"] as string,
+        endpoint: process.env["ENDPOINT"],
+        secure: false
     });
 }
 
