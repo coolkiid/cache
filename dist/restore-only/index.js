@@ -52346,14 +52346,13 @@ const utils = __importStar(__nccwpck_require__(4875));
 const versionSalt = "1.0";
 const bucket = process.env["BUCKET_NAME"];
 const repo = process.env["GITHUB_REPOSITORY"];
-const workflowHash = process.env["GITHUB_WORKFLOW_SHA"];
 const ref = process.env["GITHUB_REF"];
 function createObjectStorageClient() {
-    return new tos_sdk_1.TosClient({
-        accessKeyId: process.env["ACCESS_KEY"],
-        accessKeySecret: process.env["SECRET_KEY"],
-        region: process.env["REGION"]
-    });
+    const endpoint = process.env["ENDPOINT"];
+    const opts = endpoint
+        ? { endpoint: endpoint, secure: false }
+        : { secure: true };
+    return new tos_sdk_1.TosClient(Object.assign({ accessKeyId: process.env["ACCESS_KEY"], accessKeySecret: process.env["SECRET_KEY"], region: process.env["REGION"] }, opts));
 }
 function getCacheVersion(paths, compressionMethod, enableCrossOsArchive = false) {
     // don't pass changes upstream
@@ -52380,7 +52379,7 @@ function getCacheEntry(keys, paths, options) {
         const client = createObjectStorageClient();
         const version = getCacheVersion(paths, options === null || options === void 0 ? void 0 : options.compressionMethod, options === null || options === void 0 ? void 0 : options.enableCrossOsArchive);
         for (const key of keys) {
-            const objectKey = `caches/${repo}/${ref}/${workflowHash}/${key}`;
+            const objectKey = `caches/${repo}/${ref}/${key}`;
             try {
                 yield client.headObject({
                     bucket: bucket,
@@ -52437,7 +52436,7 @@ function handleError(error) {
 function uploadFile(client, cacheId, archivePath, options) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const objectName = `caches/${repo}/${ref}/${workflowHash}/${cacheId}`;
+            const objectName = `caches/${repo}/${ref}/${cacheId}`;
             yield client.putObjectFromFile({
                 bucket: bucket,
                 key: objectName,
