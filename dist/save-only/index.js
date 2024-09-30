@@ -52349,11 +52349,8 @@ const repo = process.env["GITHUB_REPOSITORY"];
 const workflowHash = process.env["GITHUB_WORKFLOW_SHA"];
 const ref = process.env["GITHUB_REF"];
 function createObjectStorageClient() {
-    return new tos_sdk_1.TosClient({
-        accessKeyId: process.env["ACCESS_KEY"],
-        accessKeySecret: process.env["SECRET_KEY"],
-        region: process.env["REGION"]
-    });
+    const opts = process.env["ENDPOINT"] ? { secure: false } : {};
+    return new tos_sdk_1.TosClient(Object.assign({ accessKeyId: process.env["ACCESS_KEY"], accessKeySecret: process.env["SECRET_KEY"], region: process.env["REGION"], endpoint: process.env["ENDPOINT"] }, opts));
 }
 function getCacheVersion(paths, compressionMethod, enableCrossOsArchive = false) {
     // don't pass changes upstream
