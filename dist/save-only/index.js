@@ -52352,7 +52352,9 @@ function createObjectStorageClient() {
     return new tos_sdk_1.TosClient({
         accessKeyId: process.env["ACCESS_KEY"],
         accessKeySecret: process.env["SECRET_KEY"],
-        region: process.env["REGION"]
+        region: process.env["REGION"],
+        endpoint: process.env["ENDPOINT"],
+        secure: false
     });
 }
 function getCacheVersion(paths, compressionMethod, enableCrossOsArchive = false) {
