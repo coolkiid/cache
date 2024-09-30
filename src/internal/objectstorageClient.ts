@@ -14,7 +14,6 @@ const versionSalt = "1.0";
 
 const bucket = process.env["BUCKET_NAME"];
 const repo = process.env["GITHUB_REPOSITORY"];
-const workflowHash = process.env["GITHUB_WORKFLOW_SHA"];
 const ref = process.env["GITHUB_REF"];
 
 function createObjectStorageClient(): TosClient {
@@ -72,7 +71,7 @@ export async function getCacheEntry(
     );
 
     for (const key of keys) {
-        const objectKey = `caches/${repo}/${ref}/${workflowHash}/${key}`;
+        const objectKey = `caches/${repo}/${ref}/${key}`;
         try {
             await client.headObject({
                 bucket: bucket,
@@ -132,7 +131,7 @@ async function uploadFile(
     options?: UploadOptions
 ): Promise<void> {
     try {
-        const objectName = `caches/${repo}/${ref}/${workflowHash}/${cacheId}`;
+        const objectName = `caches/${repo}/${ref}/${cacheId}`;
         await client.putObjectFromFile({
             bucket: bucket,
             key: objectName,
