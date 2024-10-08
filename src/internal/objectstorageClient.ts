@@ -58,6 +58,71 @@ export function getCacheVersion(
         .digest("hex");
 }
 
+async function getPrimaryKeyCacheEntry(
+    client: TosClient,
+    version: string,
+    primaryKey: string
+): Promise<ArtifactCacheEntry | null> {
+    const objectKey = `caches/${repo}/${ref}/${primaryKey}`;
+    try {
+        await client.headObject({
+            bucket: bucket,
+            key: objectKey
+        });
+        const entry: ArtifactCacheEntry = {
+            cacheKey: primaryKey,
+            cacheVersion: version,
+            objectKey: objectKey
+        };
+        return entry;
+    } catch (error) {
+        if (error instanceof TosServerError && error.statusCode === 404) {
+            console.warn(
+                `Unable to find cache with primary key: ${objectKey}.`
+            );
+        }
+        return null;
+    }
+}
+
+async function getRestoreKeysCacheEntry(
+    client: TosClient,
+    version: string,
+    restoreKeys: string[]
+): Promise<ArtifactCacheEntry | null> {
+    for (const key of restoreKeys) {
+        const prefix = `caches/${repo}/${ref}/${key}`;
+        try {
+            const { data } = await client.listObjectsType2({
+                bucket: bucket,
+                prefix: prefix,
+                maxKeys: 10
+            });
+
+            if (data.Contents.length == 0) {
+                console.warn(
+                    `Unable to find cache with restore key ${prefix}.`
+                );
+                continue;
+            }
+
+            const matchedKey: string = data.Contents[0].Key;
+            const entry: ArtifactCacheEntry = {
+                cacheKey: key,
+                cacheVersion: version,
+                objectKey: matchedKey
+            };
+            return entry;
+        } catch (error) {
+            console.warn(
+                `an error occurred when trying to find cache with restore key ${prefix}`
+            );
+            handleError(error);
+        }
+    }
+    return null;
+}
+
 export async function getCacheEntry(
     keys: string[],
     paths: string[],
@@ -70,26 +135,17 @@ export async function getCacheEntry(
         options?.enableCrossOsArchive
     );
 
-    for (const key of keys) {
-        const objectKey = `caches/${repo}/${ref}/${key}`;
-        try {
-            await client.headObject({
-                bucket: bucket,
-                key: objectKey
-            });
-            const entry: ArtifactCacheEntry = {
-                cacheKey: key,
-                cacheVersion: version,
-                objectKey: objectKey
-            };
-            return entry;
-        } catch (error) {
-            if (error instanceof TosServerError && error.statusCode === 404) {
-                console.warn(`Unable to find cache with key ${objectKey}.`);
-            }
-        }
+    let entry = await getPrimaryKeyCacheEntry(client, version, keys[0]);
+    if (entry) {
+        return entry;
     }
-    const entry: ArtifactCacheEntry = {
+
+    entry = await getRestoreKeysCacheEntry(client, version, keys.slice(1));
+    if (entry) {
+        return entry;
+    }
+
+    entry = {
         cacheVersion: version
     };
     console.warn(`Failed to find cache that matches keys: ${keys}`);
