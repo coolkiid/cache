@@ -52346,7 +52346,6 @@ const utils = __importStar(__nccwpck_require__(4875));
 const versionSalt = "1.0";
 const bucket = process.env["BUCKET_NAME"];
 const repo = process.env["GITHUB_REPOSITORY"];
-const ref = process.env["GITHUB_REF"];
 function createObjectStorageClient() {
     const endpoint = process.env["ENDPOINT"];
     const opts = endpoint
@@ -52374,31 +52373,72 @@ function getCacheVersion(paths, compressionMethod, enableCrossOsArchive = false)
         .digest("hex");
 }
 exports.getCacheVersion = getCacheVersion;
-function getCacheEntry(keys, paths, options) {
+function getPrimaryKeyCacheEntry(client, version, primaryKey) {
     return __awaiter(this, void 0, void 0, function* () {
-        const client = createObjectStorageClient();
-        const version = getCacheVersion(paths, options === null || options === void 0 ? void 0 : options.compressionMethod, options === null || options === void 0 ? void 0 : options.enableCrossOsArchive);
-        for (const key of keys) {
-            const objectKey = `caches/${repo}/${ref}/${key}`;
+        const objectKey = `caches/${repo}/${primaryKey}`;
+        try {
+            yield client.headObject({
+                bucket: bucket,
+                key: objectKey
+            });
+            const entry = {
+                cacheKey: primaryKey,
+                cacheVersion: version,
+                objectKey: objectKey
+            };
+            return entry;
+        }
+        catch (error) {
+            if (error instanceof tos_sdk_1.TosServerError && error.statusCode === 404) {
+                console.warn(`Unable to find cache with primary key: ${objectKey}.`);
+            }
+            return null;
+        }
+    });
+}
+function getRestoreKeysCacheEntry(client, version, restoreKeys) {
+    return __awaiter(this, void 0, void 0, function* () {
+        for (const key of restoreKeys) {
+            const prefix = `caches/${repo}/${key}`;
             try {
-                yield client.headObject({
+                const { data } = yield client.listObjectsType2({
                     bucket: bucket,
-                    key: objectKey
+                    prefix: prefix,
+                    maxKeys: 10
                 });
+                if (data.Contents.length == 0) {
+                    console.warn(`Unable to find cache with restore key ${prefix}.`);
+                    continue;
+                }
+                const matchedKey = data.Contents[0].Key;
                 const entry = {
                     cacheKey: key,
                     cacheVersion: version,
-                    objectKey: objectKey
+                    objectKey: matchedKey
                 };
                 return entry;
             }
             catch (error) {
-                if (error instanceof tos_sdk_1.TosServerError && error.statusCode === 404) {
-                    console.warn(`Unable to find cache with key ${objectKey}.`);
-                }
+                console.warn(`an error occurred when trying to find cache with restore key ${prefix}`);
+                handleError(error);
             }
         }
-        const entry = {
+        return null;
+    });
+}
+function getCacheEntry(keys, paths, options) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const client = createObjectStorageClient();
+        const version = getCacheVersion(paths, options === null || options === void 0 ? void 0 : options.compressionMethod, options === null || options === void 0 ? void 0 : options.enableCrossOsArchive);
+        let entry = yield getPrimaryKeyCacheEntry(client, version, keys[0]);
+        if (entry) {
+            return entry;
+        }
+        entry = yield getRestoreKeysCacheEntry(client, version, keys.slice(1));
+        if (entry) {
+            return entry;
+        }
+        entry = {
             cacheVersion: version
         };
         console.warn(`Failed to find cache that matches keys: ${keys}`);
@@ -52436,7 +52476,7 @@ function handleError(error) {
 function uploadFile(client, cacheId, archivePath, options) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const objectName = `caches/${repo}/${ref}/${cacheId}`;
+            const objectName = `caches/${repo}/${cacheId}`;
             yield client.putObjectFromFile({
                 bucket: bucket,
                 key: objectName,
