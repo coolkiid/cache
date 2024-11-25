@@ -51886,10 +51886,13 @@ function restoreCache(paths, primaryKey, restoreKeys, options, enableCrossOsArch
         let archivePath = '';
         try {
             // path are needed to compute version
+            let t1 = performance.now();
             const cacheEntry = yield cacheHttpClient.getCacheEntry(keys, paths, {
                 compressionMethod,
                 enableCrossOsArchive
             });
+            let t2 = performance.now();
+            console.warn(`time cost of getCacheEntry is ${t2 - t1}`);
             if (!(cacheEntry === null || cacheEntry === void 0 ? void 0 : cacheEntry.objectKey)) {
                 // Cache not found
                 return undefined;
@@ -51902,6 +51905,8 @@ function restoreCache(paths, primaryKey, restoreKeys, options, enableCrossOsArch
             core.debug(`Archive Path: ${archivePath}`);
             // Download the cache from the cache entry
             yield cacheHttpClient.downloadCache(cacheEntry.objectKey, archivePath, options);
+            let t3 = performance.now();
+            console.warn(`time cost of downloadCache is ${t3 - t2}`);
             if (core.isDebug()) {
                 yield (0, tar_1.listTar)(archivePath, compressionMethod);
             }
@@ -51909,6 +51914,8 @@ function restoreCache(paths, primaryKey, restoreKeys, options, enableCrossOsArch
             core.info(`Cache Size: ~${Math.round(archiveFileSize / (1024 * 1024))} MB (${archiveFileSize} B)`);
             yield (0, tar_1.extractTar)(archivePath, compressionMethod);
             core.info('Cache restored successfully');
+            let t4 = performance.now();
+            console.warn(`time cost of extractTar is ${t4 - t3}`);
             return cacheEntry.cacheKey;
         }
         catch (error) {
@@ -52430,14 +52437,19 @@ function getCacheEntry(keys, paths, options) {
     return __awaiter(this, void 0, void 0, function* () {
         const client = createObjectStorageClient();
         const version = getCacheVersion(paths, options === null || options === void 0 ? void 0 : options.compressionMethod, options === null || options === void 0 ? void 0 : options.enableCrossOsArchive);
+        let t1 = performance.now();
         let entry = yield getPrimaryKeyCacheEntry(client, version, keys[0]);
         if (entry) {
             return entry;
         }
+        let t2 = performance.now();
+        console.warn(`time cost of getPrimaryKeyCacheEntry is ${t2 - t1}`);
         entry = yield getRestoreKeysCacheEntry(client, version, keys.slice(1));
         if (entry) {
             return entry;
         }
+        let t3 = performance.now();
+        console.warn(`time cost of getRestoreKeysCacheEntry is ${t3 - t2}`);
         entry = {
             cacheVersion: version
         };
