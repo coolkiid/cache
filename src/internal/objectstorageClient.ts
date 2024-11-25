@@ -134,15 +134,23 @@ export async function getCacheEntry(
         options?.enableCrossOsArchive
     );
 
+    let t1 = performance.now();
+
     let entry = await getPrimaryKeyCacheEntry(client, version, keys[0]);
     if (entry) {
         return entry;
     }
 
+    let t2 = performance.now();
+    console.warn(`time cost of getPrimaryKeyCacheEntry is ${t2 - t1}`);
+
     entry = await getRestoreKeysCacheEntry(client, version, keys.slice(1));
     if (entry) {
         return entry;
     }
+
+    let t3 = performance.now();
+    console.warn(`time cost of getRestoreKeysCacheEntry is ${t3 - t2}`);
 
     entry = {
         cacheVersion: version

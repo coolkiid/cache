@@ -94,10 +94,17 @@ export async function restoreCache(
   let archivePath = ''
   try {
     // path are needed to compute version
+
+    let t1 = performance.now();
+
     const cacheEntry = await cacheHttpClient.getCacheEntry(keys, paths, {
       compressionMethod,
       enableCrossOsArchive
     })
+
+    let t2 = performance.now();
+    console.warn(`time cost of getCacheEntry is ${t2 - t1}`);
+
     if (!cacheEntry?.objectKey) {
       // Cache not found
       return undefined
@@ -121,6 +128,9 @@ export async function restoreCache(
       options
     )
 
+    let t3 = performance.now();
+    console.warn(`time cost of downloadCache is ${t3 - t2}`);
+
     if (core.isDebug()) {
       await listTar(archivePath, compressionMethod)
     }
@@ -134,6 +144,9 @@ export async function restoreCache(
 
     await extractTar(archivePath, compressionMethod)
     core.info('Cache restored successfully')
+
+    let t4 = performance.now();
+    console.warn(`time cost of extractTar is ${t4 - t3}`);
 
     return cacheEntry.cacheKey
   } catch (error) {
