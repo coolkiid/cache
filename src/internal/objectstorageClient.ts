@@ -95,7 +95,7 @@ async function getRestoreKeysCacheEntry(
             const { data } = await client.listObjectsType2({
                 bucket: bucket,
                 prefix: prefix,
-                maxKeys: 10
+                maxKeys: 100
             });
 
             if (data.Contents.length == 0) {
@@ -105,9 +105,19 @@ async function getRestoreKeysCacheEntry(
                 continue;
             }
 
-            const matchedKey: string = data.Contents[0].Key;
+            let index = 0;
+            let latestModifiedTime = new Date(data.Contents[index].LastModified).getTime();
+            for (let i = 1; i < data.Contents.length; i++) {
+                const modifiedTime = new Date(data.Contents[i].LastModified).getTime();
+                if (modifiedTime > latestModifiedTime) {
+                    index = i;
+                    latestModifiedTime = modifiedTime;
+                }
+            }
+
+            const matchedKey: string = data.Contents[index].Key;
             const entry: ArtifactCacheEntry = {
-                cacheKey: key,
+                cacheKey: matchedKey,
                 cacheVersion: version,
                 objectKey: matchedKey
             };
