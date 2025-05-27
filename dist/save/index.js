@@ -75475,9 +75475,9 @@ function saveImpl(stateProvider) {
     return __awaiter(this, void 0, void 0, function* () {
         let cacheId = undefined;
         try {
-            if (!utils.isCacheFeatureAvailable()) {
-                return;
-            }
+            // if (!utils.isCacheFeatureAvailable()) {
+            //     return;
+            // }
             if (!utils.isValidEvent()) {
                 utils.logWarning(`Event Validation Error: The event type ${process.env[constants_1.Events.Key]} is not supported because it's not tied to a branch or tag ref.`);
                 return;

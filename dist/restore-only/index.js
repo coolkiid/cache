@@ -75470,10 +75470,10 @@ const utils = __importStar(__nccwpck_require__(6850));
 function restoreImpl(stateProvider, earlyExit) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            if (!utils.isCacheFeatureAvailable()) {
-                core.setOutput(constants_1.Outputs.CacheHit, "false");
-                return;
-            }
+            // if (!utils.isCacheFeatureAvailable()) {
+            //     core.setOutput(Outputs.CacheHit, "false");
+            //     return;
+            // }
             // Validate inputs, this can cause task failure
             if (!utils.isValidEvent()) {
                 utils.logWarning(`Event Validation Error: The event type ${process.env[constants_1.Events.Key]} is not supported because it's not tied to a branch or tag ref.`);

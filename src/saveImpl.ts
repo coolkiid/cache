@@ -19,9 +19,9 @@ export async function saveImpl(
 ): Promise<string | void> {
     let cacheId: string | void = undefined;
     try {
-        if (!utils.isCacheFeatureAvailable()) {
-            return;
-        }
+        // if (!utils.isCacheFeatureAvailable()) {
+        //     return;
+        // }
 
         if (!utils.isValidEvent()) {
             utils.logWarning(

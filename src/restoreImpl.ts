@@ -14,10 +14,10 @@ export async function restoreImpl(
     earlyExit?: boolean | undefined
 ): Promise<string | undefined> {
     try {
-        if (!utils.isCacheFeatureAvailable()) {
-            core.setOutput(Outputs.CacheHit, "false");
-            return;
-        }
+        // if (!utils.isCacheFeatureAvailable()) {
+        //     core.setOutput(Outputs.CacheHit, "false");
+        //     return;
+        // }
 
         // Validate inputs, this can cause task failure
         if (!utils.isValidEvent()) {
