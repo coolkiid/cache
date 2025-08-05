@@ -75300,6 +75300,8 @@ function getCommands(compressionMethod, type, archivePath = '') {
 }
 function getWorkingDirectory() {
     var _a;
+    console.warn(`> ${process.env['GITHUB_WORKSPACE']}`);
+    console.warn(`> ${process.cwd()}`);
     return (_a = process.env['GITHUB_WORKSPACE']) !== null && _a !== void 0 ? _a : process.cwd();
 }
 // Common function for extractTar and listTar to get the compression method

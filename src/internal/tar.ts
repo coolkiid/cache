@@ -165,6 +165,10 @@ async function getCommands(
 }
 
 function getWorkingDirectory(): string {
+
+  console.warn(`> ${process.env['GITHUB_WORKSPACE']}`)
+  console.warn(`> ${process.cwd()}`)
+
   return process.env['GITHUB_WORKSPACE'] ?? process.cwd()
 }
 
