@@ -1,6 +1,8 @@
 // https://github.com/actions/toolkit/blob/main/packages/cache/src/cache.ts
 // 6c4e082c181a51609197e536ef5255a0c9baeef7
 
+import { readFileSync } from "fs"
+import { join } from "path";
 import * as core from "@actions/core";
 import { TosClient, TosClientError, TosServerError } from "@volcengine/tos-sdk";
 import * as crypto from "crypto";
@@ -12,19 +14,44 @@ import { ArtifactCacheEntry, InternalCacheOptions } from "./contracts.d";
 
 const versionSalt = "1.0";
 
-const bucket = process.env["BUCKET_NAME"];
 const repo = process.env["GITHUB_REPOSITORY"];
+const credentials: Map<string, string> = new Map()
+// TODO(coolkiid): make it compatible with Windows machine.
+const credentialsPath = process.env["TOS_CREDENTIALS_PATH"] || "/etc/tos-credentials"
+
+function getCredentials(key: string): string | undefined {
+    if (process.env[`TOS_${key}`]) {
+        return process.env[`TOS_${key}`] as string;
+    }
+
+    if (credentials.size > 0) {
+        return credentials.get(`TOS_${key}`);
+    }
+
+    if (credentialsPath === undefined) {
+        throw new Error("credentials file path not specified");
+    }
+
+    try {
+        const credentialsFile = join(credentialsPath, `TOS_${key}`);
+        const value = readFileSync(credentialsFile, "utf8");
+        return value
+    } catch (error: any) {
+        core.error("an error occurred when reading credentials file", error);
+        throw new Error(`Error loading credentials: ${error.message}`);
+    }
+}
 
 function createObjectStorageClient(): TosClient {
-    const endpoint = process.env["ENDPOINT"];
+    const endpoint = getCredentials("ENDPOINT");
     const opts = endpoint
         ? { endpoint: endpoint, secure: false }
         : { secure: true };
 
     return new TosClient({
-        accessKeyId: process.env["ACCESS_KEY"] as string,
-        accessKeySecret: process.env["SECRET_KEY"] as string,
-        region: process.env["REGION"] as string,
+        accessKeyId: getCredentials("ACCESS_KEY") as string,
+        accessKeySecret: getCredentials("SECRET_KEY") as string,
+        region: getCredentials("REGION") as string,
         ...opts
     });
 }
@@ -65,7 +92,7 @@ async function getPrimaryKeyCacheEntry(
     const objectKey = `caches/${repo}/${primaryKey}`;
     try {
         await client.headObject({
-            bucket: bucket,
+            bucket: getCredentials("BUCKET_NAME") as string,
             key: objectKey
         });
         const entry: ArtifactCacheEntry = {
@@ -93,7 +120,7 @@ async function getRestoreKeysCacheEntry(
         const prefix = `caches/${repo}/${key}`;
         try {
             const { data } = await client.listObjectsType2({
-                bucket: bucket,
+                bucket: getCredentials("BUCKET_NAME") as string,
                 prefix: prefix,
                 maxKeys: 100
             });
@@ -168,7 +195,7 @@ export async function downloadCache(
 ): Promise<void> {
     const client = createObjectStorageClient();
     await client.getObjectToFile({
-        bucket: bucket,
+        bucket: getCredentials("BUCKET_NAME") as string,
         key: objectKey,
         filePath: archivePath
     });
@@ -198,7 +225,7 @@ async function uploadFile(
     try {
         const objectName = `caches/${repo}/${cacheId}`;
         await client.putObjectFromFile({
-            bucket: bucket,
+            bucket: getCredentials("BUCKET_NAME") as string,
             key: objectName,
             filePath: archivePath
         });
