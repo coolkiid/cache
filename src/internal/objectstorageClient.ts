@@ -73,10 +73,11 @@ async function getPrimaryKeyCacheEntry(
             cacheVersion: version,
             objectKey: objectKey
         };
+        core.info(`objectKey=${objectKey}`)
         return entry;
     } catch (error) {
         if (error instanceof TosServerError && error.statusCode === 404) {
-            console.warn(
+            core.warning(
                 `Unable to find cache with primary key: ${objectKey}.`
             );
         }
@@ -146,11 +147,13 @@ export async function getCacheEntry(
 
     let entry = await getPrimaryKeyCacheEntry(client, version, keys[0]);
     if (entry) {
+        core.info(">>> primary key entry")
         return entry;
     }
 
     entry = await getRestoreKeysCacheEntry(client, version, keys.slice(1));
     if (entry) {
+        core.info(">>> restore key entry")
         return entry;
     }
 

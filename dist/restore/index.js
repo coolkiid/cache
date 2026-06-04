@@ -75014,11 +75014,12 @@ function getPrimaryKeyCacheEntry(client, version, primaryKey) {
                 cacheVersion: version,
                 objectKey: objectKey
             };
+            core.info(`objectKey=${objectKey}`);
             return entry;
         }
         catch (error) {
             if (error instanceof tos_sdk_1.TosServerError && error.statusCode === 404) {
-                console.warn(`Unable to find cache with primary key: ${objectKey}.`);
+                core.warning(`Unable to find cache with primary key: ${objectKey}.`);
             }
             return null;
         }
@@ -75069,10 +75070,12 @@ function getCacheEntry(keys, paths, options) {
         const version = getCacheVersion(paths, options === null || options === void 0 ? void 0 : options.compressionMethod, options === null || options === void 0 ? void 0 : options.enableCrossOsArchive);
         let entry = yield getPrimaryKeyCacheEntry(client, version, keys[0]);
         if (entry) {
+            core.info(">>> primary key entry");
             return entry;
         }
         entry = yield getRestoreKeysCacheEntry(client, version, keys.slice(1));
         if (entry) {
+            core.info(">>> restore key entry");
             return entry;
         }
         entry = {
